@@ -531,7 +531,7 @@ if __name__ == "__main__":
 	# In[38]:
 	
 	
-	namelist = ['h', 'dhdt', 'e', 'e2', 'de_dt', 'd2_dt', 'hKE', 'MP',  'uhM_div', 'bottom_mask', 
+	namelist = ['h', 'dhdt', 'e', 'e2', 'de_dt', 'de2_dt', 'hKE', 'MP',  'uhM_div', 'bottom_mask', 
 	            'KE_adv', 'PE_to_KE+KE_BT', 'KE_visc', 'KE_stress', 'KE_horvisc']  # needed for both energy cycles
 	
 	
