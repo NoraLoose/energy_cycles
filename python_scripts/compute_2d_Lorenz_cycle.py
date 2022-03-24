@@ -56,7 +56,6 @@ if __name__ == "__main__":
 	
 	
 	path = '/glade/scratch/noraloose/filtered_data'
-	ffile_pref = '/glade/scratch/noraloose/filtered_data/' 
 	chunks = {'time': 1, 'zl':1}
 	nr_days = 100
 	
