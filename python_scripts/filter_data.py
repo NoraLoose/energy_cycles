@@ -225,7 +225,7 @@ if __name__ == "__main__":
 	    dvhdt = dvhdt / deltat
 	    dvhdt['time'] = av['vh'].time
 	else: 
-	    raise AssertionError('av and sn datasets not compatitble')
+	    raise AssertionError('av and sn datasets not compatible')
 	
 	if previous and sn_previous.time[-1].values == av.time_bnds[0,0].values:
 	    data = sn['uh'].isel(time=0) - sn_previous['uh'].isel(time=-1)

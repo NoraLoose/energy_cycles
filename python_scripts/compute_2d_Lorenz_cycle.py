@@ -5,13 +5,13 @@ if __name__ == "__main__":
 	
 	parser.add_argument("--filter_fac", default=32, type=int, help="Filter factor")
 	parser.add_argument("--end_time", default=2900, type=int, help="End time of model output file to be filtered")
-	parser.add_argument("--extended_diags", default=True, type=bool)
+	parser.add_argument("--extended_diags", default="True", type=str, help="if you want extended diagnostics, set to 'True'")
 	
 	args = parser.parse_args()
 	
 	filter_fac = args.filter_fac
 	end_time = args.end_time
-	extended_diags = args.extended_diags
+	extended_diags = args.extended_diags == "True"
 
 	#!/usr/bin/env python
 	# coding: utf-8
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 	gprime[15] = np.nan
 	
 	
-	# In[9]:
+	# In[10]:
 	
 	
 	ds['MPE'] = (0.5 * gprime * av_f['e']**2).sum(dim='zi')
@@ -154,11 +154,13 @@ if __name__ == "__main__":
 	#      \partial_t(\text{EPE}) = \frac{1}{2}\sum_{n=0}^{N-1} g_n' \overline{\partial_t(\eta^2_n}) - \partial_t(\text{MPE}) 
 	# \end{align}
 	
-	# In[10]:
+	# In[11]:
 	
 	
 	ds['dMPEdt'] = (gprime * av_f['e'] * av_f['de_dt']).sum(dim='zi')
+	ds['dMPEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Mean Potential Energy tendency'}
 	ds['dEPEdt'] = (0.5 * gprime * av_f['de2_dt']).sum(dim='zi') - ds['dMPEdt']
+	ds['dEPEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Eddy Potential Energy tendency'}
 	
 	
 	# ### MKE & EKE
@@ -171,7 +173,7 @@ if __name__ == "__main__":
 	#  \text{EKE} = \overline{\text{KE}} - \text{MKE}
 	# \end{align}
 	
-	# In[11]:
+	# In[12]:
 	
 	
 	MKE = 0.5 * av_f['h'] * (
@@ -198,7 +200,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# from snapshots of `hKE` and the MKE snapshots.
 	
-	# In[12]:
+	# In[13]:
 	
 	
 	if np.all(av_f.average_DT == av_f.average_DT[0]):
@@ -207,7 +209,7 @@ if __name__ == "__main__":
 	    raise AssertionError('averaging intervals vary')
 	
 	
-	# In[13]:
+	# In[14]:
 	
 	
 	# MKE tendency
@@ -227,7 +229,7 @@ if __name__ == "__main__":
 	dMKEdt = dMKEdt.chunk({'time': 1})
 	ds['dMKEdt'] = dMKEdt.sum(dim='zl')
 	
-	ds['dMKEdt'].attrs = {'units' : 'm3 s-2', 'long_name': 'Mean Kinetic Energy tendency (non-TWA)'}
+	ds['dMKEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Mean Kinetic Energy tendency (non-TWA)'}
 	
 	# EKE tendency
 	hKE = sn_f['hKE']
@@ -241,7 +243,7 @@ if __name__ == "__main__":
 	hKEdt = hKEdt.where(av_f.time > av_f.time[0])  
 	hKEdt = hKEdt.chunk({'time': 1})
 	ds['dEKEdt'] = hKEdt.sum(dim='zl') - ds['dMKEdt']
-	ds['dEKEdt'].attrs = {'units' : 'm3 s-2', 'long_name': 'Eddy Kinetic Energy tendency (non-TWA)'}
+	ds['dEKEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Eddy Kinetic Energy tendency (non-TWA)'}
 	
 	
 	# ## Energy conversion terms (cf. Figure 3a in Loose et al., 2022)
@@ -252,7 +254,7 @@ if __name__ == "__main__":
 	#    \Sigma^L = \underbrace{- \sum_{n=1}^N\overline{h_n (u_n \partial_x M_n + v_n \partial_y M_n)}}_{\overline{\text{PE_to_KE+KE_BT}}} + \sum_{n=1}^N\bar{h}_n(\bar{u}_n \underbrace{\overline{\partial_x M_n}}_{-\overline{\text{PFu+u_BT_accel_visc_rem}}} + \bar{v}_n \underbrace{\overline{\partial_y M_n}}_{-\overline{\text{PFv+v_BT_accel_visc_rem}}} )
 	# \end{align}
 	
-	# In[14]:
+	# In[15]:
 	
 	
 	EKE_production = av_f['PE_to_KE+KE_BT'] - av_f['h'] / st['area_t']  * (
@@ -267,6 +269,8 @@ if __name__ == "__main__":
 	# 
 	# With 
 	# $$\mathcal{E} = \sum_{n=1}^N \left(\nabla\cdot(\overline{h_n\mathbf{u}_n}) \underbrace{- \overline{\nabla\cdot(h_n\mathbf{u}_n)}}_{\overline{\partial_t h_n}}\right) \bar{M}_n,
+	# \qquad
+	#     M_n = \sum_{k=0}^{n-1} g_k' \eta_k
 	# $$ 
 	# we have
 	# 
@@ -284,7 +288,15 @@ if __name__ == "__main__":
 	# 
 	# If you want to diagnose $\Gamma^L$ via the first option (`BC_conversion_alt`), set `extended_diags=True` at the top of this notebook.
 	
-	# In[23]:
+	# In[ ]:
+	
+	
+	MP = grid.cumsum(gprime * av_f['e'],'Z')  # Montgomery potential
+	av_f['MP'] = MP.transpose('time', 'zl', 'yh', 'xh')  # reorder coordinates
+	av_f['MP'].attrs = {'units' : 'm2 s-2', 'long_name': 'Montgomery potential'}
+	
+	
+	# In[16]:
 	
 	
 	# compute eddy pressure flux divergence, div = - D
@@ -305,7 +317,7 @@ if __name__ == "__main__":
 	    # extra term E
 	    uflux = grid.diff(av_f['uh'].fillna(value=0), 'X')
 	    vflux = grid.diff(av_f['vh'].fillna(value=0), 'Y')
-	    div = (uflux + vflux) / st.area_t  # finite volume discretization
+	    div = (uflux + vflux).where(st.wet) / st.area_t  # finite volume discretization
 	    extra_term = - av_f['MP'] * (div + av_f['dhdt']) 
 	
 	    conversion = (
@@ -341,7 +353,7 @@ if __name__ == "__main__":
 	# 
 	# If you want to diagnose $(\text{MKE} \to \text{MPE})$ via the first option (`MKE_to_MPE_alt`), set `extended_diags=True` at the top of this notebook.
 	
-	# In[27]:
+	# In[17]:
 	
 	
 	uflux = grid.diff((av_f['uh'] * grid.interp(av_f['MP'].fillna(value=0), 'X', metric_weighted=['X','Y'])).fillna(value=0),'X')
@@ -371,7 +383,7 @@ if __name__ == "__main__":
 	# \right)\right],
 	# \end{align}
 	
-	# In[17]:
+	# In[18]:
 	
 	
 	MKE = 0.5 * av_f['h'] * (
@@ -384,6 +396,9 @@ if __name__ == "__main__":
 	        + grid.diff((grid.interp(MKE.fillna(value=0),'Y',boundary='fill') * av_f['v'] * st.dxCv).fillna(value=0),'Y')
 	)
 	MKE_transport = MKE_transport.chunk({'yh':Ny, 'xh':Nx})
+	
+	ds['MKE_transport'] = MKE_transport.sum(dim='zl')
+	ds['MKE_transport'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE transport (non-TWA)'}
 	
 	EKE_transport = av_f['KE_adv'] - MKE_transport
 	ds['EKE_transport'] = EKE_transport.sum(dim='zl')
@@ -407,7 +422,7 @@ if __name__ == "__main__":
 	# $$
 	# We will use the second line to compute $\Pi^L$ below.
 	
-	# In[18]:
+	# In[19]:
 	
 	
 	MKE = 0.5 * av_f['h'] * (
@@ -450,7 +465,7 @@ if __name__ == "__main__":
 	#     - \sum_{n=1}^N \bar{h}_n (\bar{u}_n \overline{F^{u,\text{wind}}_n} + \bar{v}_n \overline{F^{v,\text{wind}}_n}), 
 	# \end{align}
 	
-	# In[19]:
+	# In[20]:
 	
 	
 	MKE_wind_stress = av_f['h'] * (
@@ -487,7 +502,7 @@ if __name__ == "__main__":
 	# 
 	# For the wind contributions, we have diagnostics from the model (see previous section). We disentangle the remainders $\overline{\mathbf{F}_n} - \overline{\mathbf{F}^\text{wind}_n}$ and $\overline{h_n \mathbf{u}_n \cdot \mathbf{F}_n}- \overline{h_n \mathbf{u}_n \cdot \mathbf{F}^\text{wind}_n }$ into contributions from bottom drag and vertical friction offline, by classifying them as a contribution by bottom drag if the lower interface of layer $n$ is within the bottom boundary layer, and as a contribution by vertical friction otherwise. This is handled by applying `av_f.bottom_mask`.
 	
-	# In[20]:
+	# In[21]:
 	
 	
 	# MKE_vertical_stresses and EKE_vertical_stresses include contributions from bottom drag, vertical viscosity, and wind stress
@@ -531,7 +546,7 @@ if __name__ == "__main__":
 	#     - \sum_{n=1}^N \bar{h}_n (\bar{u}_n \overline{F^{u,h}_n} + \bar{v}_n \overline{F^{v,h}_n}), 
 	# \end{align}
 	
-	# In[21]:
+	# In[22]:
 	
 	
 	MKE_horizontal_viscosity = av_f['h'] * (
@@ -547,13 +562,13 @@ if __name__ == "__main__":
 	
 	# ## Save to netcdf
 	
-	# In[28]:
+	# In[23]:
 	
 	
 	ds
 	
 	
-	# In[30]:
+	# In[24]:
 	
 	
 	scratchpath = '/glade/scratch/noraloose/filtered_data'

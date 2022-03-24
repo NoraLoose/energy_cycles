@@ -5,13 +5,13 @@ if __name__ == "__main__":
 	
 	parser.add_argument("--filter_fac", default=32, type=int, help="Filter factor")
 	parser.add_argument("--end_time", default=2900, type=int, help="End time of model output file to be filtered")
-	parser.add_argument("--extended_diags", default=True, type=bool)
+	parser.add_argument("--extended_diags", default="True", type=str, help="if you want extended diagnostics, set to 'True'")
 	
 	args = parser.parse_args()
 	
 	filter_fac = args.filter_fac
 	end_time = args.end_time
-	extended_diags = args.extended_diags
+	extended_diags = args.extended_diags == "True"
 
 	#!/usr/bin/env python
 	# coding: utf-8
@@ -23,12 +23,10 @@ if __name__ == "__main__":
 	# 
 	# Note: To get non-depth-integrated terms, remove all `.sum(dim='zi')` and `.sum(dim='zl')` statements.
 	
-	# In[1]:
+	# In[3]:
 	
 	
-	
-	
-	# In[2]:
+	# In[4]:
 	
 	
 	import numpy as np
@@ -38,7 +36,7 @@ if __name__ == "__main__":
 	from dask.diagnostics import ProgressBar
 	
 	
-	# In[3]:
+	# In[5]:
 	
 	
 	run = 'nw2_0.03125deg_N15_baseline_hmix20'
@@ -46,7 +44,7 @@ if __name__ == "__main__":
 	
 	# ## Get a view of Neverworld2 data
 	
-	# In[4]:
+	# In[6]:
 	
 	
 	# static file with grid information
@@ -54,7 +52,7 @@ if __name__ == "__main__":
 	st = xr.open_dataset('%s/%s/static.nc' % (path, run), decode_times=False)
 	
 	
-	# In[5]:
+	# In[7]:
 	
 	
 	path = '/glade/scratch/noraloose/filtered_data'
@@ -71,7 +69,7 @@ if __name__ == "__main__":
 	
 	# ## Prepare NW2 grid information
 	
-	# In[6]:
+	# In[8]:
 	
 	
 	from xgcm import Grid
@@ -106,7 +104,7 @@ if __name__ == "__main__":
 	
 	# ## New dataset for Bleck cycle
 	
-	# In[7]:
+	# In[9]:
 	
 	
 	ds = xr.Dataset() # new xarray dataset for terms in Bleck cycle 
@@ -131,7 +129,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# with $g_k' = g (\rho_{k+1} - \rho_k) / \rho_o$
 	
-	# In[8]:
+	# In[10]:
 	
 	
 	rho_ref = 1000  # refernce density in NeverWorld2
@@ -140,7 +138,7 @@ if __name__ == "__main__":
 	gprime[15] = np.nan
 	
 	
-	# In[9]:
+	# In[11]:
 	
 	
 	ds['MPE'] = (0.5 * gprime * av_f['e']**2).sum(dim='zi')
@@ -156,11 +154,13 @@ if __name__ == "__main__":
 	#      \partial_t(\text{EPE}) = \frac{1}{2}\sum_{n=0}^{N-1} g_n' \overline{\partial_t(\eta^2_n}) - \partial_t(\text{MPE}) 
 	# \end{align}
 	
-	# In[10]:
+	# In[12]:
 	
 	
 	ds['dMPEdt'] = (gprime * av_f['e'] * av_f['de_dt']).sum(dim='zi')
+	ds['dMPEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Mean Potential Energy tendency'}
 	ds['dEPEdt'] = (0.5 * gprime * av_f['de2_dt']).sum(dim='zi') - ds['dMPEdt']
+	ds['dEPEdt'].attrs = {'units' : 'm3 s-3', 'long_name': 'Eddy Potential Energy tendency'}
 	
 	
 	# ### MKE & EKE
@@ -178,7 +178,7 @@ if __name__ == "__main__":
 	# \hat{u}_n  = \frac{\overline{h_n u_n}}{\bar{h}_n}, \qquad \hat{v}_n  = \frac{\overline{h_n v_n}}{\bar{h}_n}
 	# \end{align}
 	
-	# In[11]:
+	# In[13]:
 	
 	
 	MKE = 0.5 / av_f['h'] * (
@@ -205,7 +205,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# from snapshots of `hKE` and the MKE snapshots.
 	
-	# In[12]:
+	# In[14]:
 	
 	
 	if np.all(av_f.average_DT == av_f.average_DT[0]):
@@ -214,7 +214,7 @@ if __name__ == "__main__":
 	    raise AssertionError('averaging intervals vary')
 	
 	
-	# In[13]:
+	# In[15]:
 	
 	
 	# MKE tendency
@@ -234,7 +234,7 @@ if __name__ == "__main__":
 	dMKEdt = dMKEdt.chunk({'time': 1})
 	ds['dMKEdt_TWA'] = dMKEdt.sum(dim='zl')
 	
-	ds['dMKEdt_TWA'].attrs = {'units' : 'm3 s-2', 'long_name': 'Mean Kinetic Energy tendency (TWA)'}
+	ds['dMKEdt_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'Mean Kinetic Energy tendency (TWA)'}
 	
 	# EKE tendency
 	hKE = sn_f['hKE']
@@ -248,7 +248,7 @@ if __name__ == "__main__":
 	hKEdt = hKEdt.where(av_f.time > av_f.time[0])  
 	hKEdt = hKEdt.chunk({'time': 1})
 	ds['dEKEdt_TWA'] = hKEdt.sum(dim='zl') - ds['dMKEdt_TWA']
-	ds['dEKEdt_TWA'].attrs = {'units' : 'm3 s-2', 'long_name': 'Eddy Kinetic Energy tendency (TWA)'}
+	ds['dEKEdt_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'Eddy Kinetic Energy tendency (TWA)'}
 	
 	
 	# ## Energy conversion terms (cf. Figure 3b in Loose et al., 2022)
@@ -260,7 +260,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# 
 	
-	# In[14]:
+	# In[41]:
 	
 	
 	EKE_production = av_f['PE_to_KE+KE_BT'] - 1 / st['area_t'] / av_f['h'] * (
@@ -275,6 +275,8 @@ if __name__ == "__main__":
 	# 
 	# With 
 	# $$\mathcal{E} = \sum_{n=1}^N \left(\nabla\cdot(\overline{h_n\mathbf{u}_n}) \underbrace{- \overline{\nabla\cdot(h_n\mathbf{u}_n)}}_{\overline{\partial_t h_n}}\right) \bar{M}_n,
+	# \qquad
+	#     M_n = \sum_{k=0}^{n-1} g_k' \eta_k
 	# $$ 
 	# we have
 	# 
@@ -292,7 +294,15 @@ if __name__ == "__main__":
 	# 
 	# If you want to diagnose $\Gamma^B$ via the first option (`BC_conversion_TWA_alt`), set `extended_diags=True` at the top of this notebook.
 	
-	# In[25]:
+	# In[16]:
+	
+	
+	MP = grid.cumsum(gprime * av_f['e'],'Z')  # Montgomery potential
+	av_f['MP'] = MP.transpose('time', 'zl', 'yh', 'xh')  # reorder coordinates
+	av_f['MP'].attrs = {'units' : 'm2 s-2', 'long_name': 'Montgomery potential'}
+	
+	
+	# In[17]:
 	
 	
 	# compute eddy pressure flux divergence, div = - D
@@ -313,7 +323,7 @@ if __name__ == "__main__":
 	    # extra term E
 	    uflux = grid.diff(av_f['uh'].fillna(value=0), 'X')
 	    vflux = grid.diff(av_f['vh'].fillna(value=0), 'Y')
-	    div = (uflux + vflux) / st.area_t  # finite volume discretization
+	    div = (uflux + vflux).where(st.wet) / st.area_t  # finite volume discretization
 	    extra_term = - av_f['MP'] * (div + av_f['dhdt']) 
 	
 	    conversion = (
@@ -327,6 +337,7 @@ if __name__ == "__main__":
 	
 	    ds['BC_conversion_TWA_alt'] = (conversion - extra_term).sum(dim='zl').chunk({'yh':Ny, 'xh':Nx})
 	    ds['BC_conversion_TWA_alt'].attrs = {'units' : 'm3 s-3', 'long_name': 'baroclinic conversion (TWA), alternative computation'}
+	    
 	
 	
 	# ### MKE --> MPE
@@ -379,6 +390,10 @@ if __name__ == "__main__":
 	        + grid.diff((grid.interp((MKE / av_f['h']).fillna(value=0),'Y',boundary='fill') * av_f['vh']).fillna(value=0),'Y')
 	)
 	MKE_transport = MKE_transport.chunk({'yh':Ny, 'xh':Nx})
+	
+	ds['MKE_transport_TWA'] = MKE_transport.sum(dim='zl')
+	ds['MKE_transport_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE transport (TWA)'}
+	
 	
 	EKE_transport = av_f['KE_adv'] - MKE_transport
 	ds['EKE_transport_TWA'] = EKE_transport.sum(dim='zl')
