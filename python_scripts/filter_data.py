@@ -5,15 +5,15 @@ if __name__ == "__main__":
 	
 	parser.add_argument("--filter_fac", default=32, type=int, help="Filter factor")
 	parser.add_argument("--end_time", default=2900, type=int, help="End time of model output file to be filtered")
-	parser.add_argument("--lorenz", default=True, type=bool)
-	parser.add_argument("--bleck", default=True, type=bool)
+	parser.add_argument("--lorenz", default="True", type=str, help="If you want to filter all necessary data for Lorenz cycle, set to 'True'")
+	parser.add_argument("--bleck", default="True", type=str, help="If you want to filter all necessary data for Bleck cycle, set to 'True'")
 	
 	args = parser.parse_args()
 	
 	filter_fac = args.filter_fac
 	end_time = args.end_time
-	lorenz = args.lorenz
-	bleck = args.bleck
+	lorenz = args.lorenz == "True"
+	bleck = args.bleck == "True"
 
 	#!/usr/bin/env python
 	# coding: utf-8
@@ -21,10 +21,12 @@ if __name__ == "__main__":
 	# # 1: Filter NeverWorld2 data using diffusion-based filters
 	# * Assumes that you have already run `make_bottom_mask.ipynb`
 	
-	# In[7]:
+	# In[40]:
 	
 	
-	# In[8]:
+	
+	
+	# In[41]:
 	
 	
 	import numpy as np
@@ -32,14 +34,14 @@ if __name__ == "__main__":
 	import dask
 	
 	
-	# In[9]:
+	# In[42]:
 	
 	
 	#import warnings
 	#warnings.filterwarnings('ignore')
 	
 	
-	# In[10]:
+	# In[43]:
 	
 	
 	gpu = True  # using gpu will considerably speed up the filter computations
@@ -47,7 +49,7 @@ if __name__ == "__main__":
 	
 	# ## Get a view of Neverworld2 data
 	
-	# In[11]:
+	# In[6]:
 	
 	
 	path = '/glade/p/univ/unyu0004/gmarques/NeverWorld2/baselines/'
@@ -62,7 +64,7 @@ if __name__ == "__main__":
 	
 	# Bottom mask (was computed in `make_bottom_mask.ipynb`)
 	
-	# In[12]:
+	# In[16]:
 	
 	
 	scratchpath = '/glade/scratch/noraloose/'
@@ -71,13 +73,13 @@ if __name__ == "__main__":
 	av['bottom_mask'].attrs = av['bottom_mask'].attrs
 	
 	
-	# In[13]:
+	# In[17]:
 	
 	
 	sn.time
 	
 	
-	# In[14]:
+	# In[18]:
 	
 	
 	av.time
@@ -85,7 +87,7 @@ if __name__ == "__main__":
 	
 	# Some missing 5-day average diagnostics are computed from snapshots. Since the snapshots time steps in `sn` are taken at the *end* of the 5-day average windows in `av` (see above), we can try and see if we have snapshot data for the 100 previous days, to be able to recover average data for the *first* 5-day window.
 	
-	# In[15]:
+	# In[19]:
 	
 	
 	previous_sn_file = '%s/%s/snapshots_%08d.nc' % (path, run, end_time-2*nr_days+5)
@@ -98,7 +100,7 @@ if __name__ == "__main__":
 	previous
 	
 	
-	# In[16]:
+	# In[20]:
 	
 	
 	sn_previous.time
@@ -106,7 +108,7 @@ if __name__ == "__main__":
 	
 	# ## Prepare NW2 grid information
 	
-	# In[17]:
+	# In[21]:
 	
 	
 	from xgcm import Grid
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 	# 
 	# $hKE_n = h_n KE_n$, where $KE_n =\frac{1}{2}|\mathbf{u}_n|^2 $ is the kinetic energy density output by the model.
 	
-	# In[18]:
+	# In[28]:
 	
 	
 	av['hKE'] = av['h'] * av['KE']
@@ -161,7 +163,7 @@ if __name__ == "__main__":
 	# \underbrace{\partial_t h}_\text{dhdt} = - \nabla\cdot(h\mathbf{u})
 	# $$
 	
-	# In[19]:
+	# In[29]:
 	
 	
 	uflux = grid.diff(av['uh'].fillna(value=0),'X')
@@ -180,14 +182,14 @@ if __name__ == "__main__":
 	# $
 	# is diagnostic, saved as `e`.
 	
-	# In[20]:
+	# In[30]:
 	
 	
 	av['e2'] = av['e']**2
 	av['e2'].attrs = {'units' : 'm2', 'long_name': 'Interface height squared'}
 	
 	
-	# In[21]:
+	# In[31]:
 	
 	
 	sn['e2'] = sn['e']**2
@@ -204,7 +206,7 @@ if __name__ == "__main__":
 	# $$
 	# and similarly for the other partial derivatives
 	
-	# In[22]:
+	# In[32]:
 	
 	
 	if np.all(av.average_DT == av.average_DT[0]):
@@ -213,7 +215,7 @@ if __name__ == "__main__":
 	    raise AssertionError('averaging intervals vary')
 	
 	
-	# In[23]:
+	# In[33]:
 	
 	
 	if np.array_equal(av.time_bnds[:,1], sn.time) :
@@ -225,7 +227,7 @@ if __name__ == "__main__":
 	    dvhdt = dvhdt / deltat
 	    dvhdt['time'] = av['vh'].time
 	else: 
-	    raise AssertionError('av and sn datasets not compatible')
+	    raise AssertionError('av and sn datasets not compatitble')
 	
 	if previous and sn_previous.time[-1].values == av.time_bnds[0,0].values:
 	    data = sn['uh'].isel(time=0) - sn_previous['uh'].isel(time=-1)
@@ -245,7 +247,7 @@ if __name__ == "__main__":
 	av['dvhdt'].attrs = {'units' : 'm3 s-2', 'long_name': 'Meridional thickness flux tendency'}
 	
 	
-	# In[24]:
+	# In[34]:
 	
 	
 	if np.array_equal(av.time_bnds[:,1], sn.time) :
@@ -257,7 +259,7 @@ if __name__ == "__main__":
 	    de2dt = de2dt / deltat
 	    de2dt['time'] = av['e2'].time
 	else: 
-	    raise AssertionError('av and sn datasets not compatitble')
+	    raise AssertionError('av and sn datasets not compatible')
 	
 	if previous and sn_previous.time[-1].values == av.time_bnds[0,0].values:
 	    data = sn['e'].isel(time=0) - sn_previous['e'].isel(time=-1)
@@ -281,7 +283,7 @@ if __name__ == "__main__":
 	
 	# ### Compute $ u\partial_t h = \partial_t(uh) - h\partial_tu$ and  $v\partial_t h = \partial_t(vh) - h\partial_tv$
 	
-	# In[25]:
+	# In[35]:
 	
 	
 	av['u_dhdt'] = av['duhdt'] / st['dyCu'] - av['h_du_dt']
@@ -296,7 +298,7 @@ if __name__ == "__main__":
 	#     g_k' = g (\rho_{k+1} - \rho_k) / \rho_o
 	# $$
 	
-	# In[26]:
+	# In[36]:
 	
 	
 	rho_ref = 1000  # reference density in NeverWorld2
@@ -311,7 +313,7 @@ if __name__ == "__main__":
 	#     M_n = \sum_{k=0}^{n-1} g_k' \eta_k
 	# $$
 	
-	# In[27]:
+	# In[37]:
 	
 	
 	MP = grid.cumsum(gprime * av['e'],'Z')  # Montgomery potential
@@ -321,7 +323,7 @@ if __name__ == "__main__":
 	
 	# ### Compute pressure flux divergence `uhM_div` = $\nabla\cdot(u_nh_nM_n)$
 	
-	# In[29]:
+	# In[38]:
 	
 	
 	# pressure flux
@@ -335,7 +337,7 @@ if __name__ == "__main__":
 	uflux = grid.diff((uhM * st['dyCu']).fillna(value=0), 'X')
 	vflux = grid.diff((vhM * st['dxCv']).fillna(value=0), 'Y', boundary='fill')
 	
-	av['uhM_div'] = (uflux + vflux) / st.area_t
+	av['uhM_div'] = (uflux + vflux).where(st.wet) / st.area_t
 	av['uhM_div'].attrs = {'units' : ' m3 s-3', 'long_name': 'Pressure flux divergence'}
 	
 	
@@ -345,7 +347,7 @@ if __name__ == "__main__":
 	# \underbrace{- \sum_{i=1}^{k} g_{i-1/2}^\prime \nabla \eta_{i-1/2}}_\text{PFu+ u_BT_accel}
 	# $$
 	
-	# In[30]:
+	# In[39]:
 	
 	
 	av['PFu+u_BT_accel'] = av['PFu'] + av['u_BT_accel']
@@ -394,7 +396,7 @@ if __name__ == "__main__":
 	#     
 	# as done in the next cell.
 	
-	# In[31]:
+	# In[40]:
 	
 	
 	av['du_dt_visc_rem'] = av['dudt'] - av['CAu_visc_rem'] - av['PFu_visc_rem'] - av['u_BT_accel_visc_rem'] - av['diffu_visc_rem']
@@ -405,13 +407,13 @@ if __name__ == "__main__":
 	
 	# # Filtering
 	
-	# In[27]:
+	# In[7]:
 	
 	
 	import gcm_filters
 	
 	
-	# In[28]:
+	# In[8]:
 	
 	
 	if gpu:
@@ -425,21 +427,21 @@ if __name__ == "__main__":
 	
 	# ### Transform symmetric data to non-symmetric data
 	
-	# In[29]:
+	# In[9]:
 	
 	
 	av_orig = av.copy()
 	sn_orig = sn.copy()
 	
 	
-	# In[30]:
+	# In[10]:
 	
 	
 	av = av.astype(np.float64)  # to avoid numerical instability
 	sn = sn.astype(np.float64)  # to avoid numerical instability
 	
 	
-	# In[31]:
+	# In[11]:
 	
 	
 	av = av.isel(xq = slice(1,None), yq=slice(1,None))
@@ -448,7 +450,7 @@ if __name__ == "__main__":
 	
 	# ### New datasets for filtered fields
 	
-	# In[32]:
+	# In[12]:
 	
 	
 	# new xarray datasets for filtered fields
@@ -471,7 +473,7 @@ if __name__ == "__main__":
 	
 	# ### Use Gaussian filter shape and simple fixed factor (see Grooms et al., 2021)
 	
-	# In[33]:
+	# In[13]:
 	
 	
 	filter_shape = gcm_filters.FilterShape.GAUSSIAN
@@ -480,20 +482,20 @@ if __name__ == "__main__":
 	
 	# For large filter factors, use `n_iterations > 1`, see https://gcm-filters.readthedocs.io/en/latest/factored_gaussian.html
 	
-	# In[34]:
+	# In[54]:
 	
 	
 	if filter_fac == 128:
-	    n_iterations = 8
+	    n_iterations = 12
 	elif filter_fac == 64:
-	    n_iterations = 2
+	    n_iterations = 3
 	else:
 	    n_iterations = 1
 	
 	
 	# ## T-fields
 	
-	# In[35]:
+	# In[55]:
 	
 	
 	wet_mask = st.wet
@@ -506,7 +508,7 @@ if __name__ == "__main__":
 	    area.data = area.data.map_blocks(cp.asarray)
 	
 	
-	# In[36]:
+	# In[56]:
 	
 	
 	filter_t = gcm_filters.Filter(
@@ -520,7 +522,7 @@ if __name__ == "__main__":
 	filter_t
 	
 	
-	# In[37]:
+	# In[24]:
 	
 	
 	filter_t.plot_shape()
@@ -528,14 +530,14 @@ if __name__ == "__main__":
 	
 	# #### Filter averages
 	
-	# In[38]:
+	# In[52]:
 	
 	
-	namelist = ['h', 'dhdt', 'e', 'e2', 'de_dt', 'de2_dt', 'hKE', 'MP',  'uhM_div', 'bottom_mask', 
+	namelist = ['h', 'dhdt', 'e', 'e2', 'de_dt', 'de2_dt', 'hKE', 'uhM_div', 'bottom_mask', 
 	            'KE_adv', 'PE_to_KE+KE_BT', 'KE_visc', 'KE_stress', 'KE_horvisc']  # needed for both energy cycles
 	
 	
-	# In[39]:
+	# In[53]:
 	
 	
 	for name in namelist:
@@ -559,11 +561,13 @@ if __name__ == "__main__":
 	# 
 	# The original bottom mask (`av.bottom_mask`) had binary values: 0 and 1. The filtered bottom mask that is generated by the cell above has values in [0, 1]. To obtain a binary filtered mask, we set values greater than `threshold` to 1, where `threshold` is a value between 0 and 1. Below, we choose `threshold=0`. The resulting (modified) filtered bottom mask can be viewed as a conservative (or upper bound for an) estimate of which layers are contained in the bottom boundary layer. We have experimented with changing `threshold` to values larger than 0, and the results of the paper (MKE bottom drag contribution vs. MKE vertical viscosity contribution) are not very sensitive to this choice.
 	
-	# In[40]:
+	# In[54]:
 	
 	
 	threshold = 0
 	av_f['bottom_mask'] = xr.where(av_f['bottom_mask'] > threshold, 1, 0)   
+	
+	
 	
 	
 	# #### Filter snapshots
