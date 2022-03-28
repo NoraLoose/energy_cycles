@@ -356,9 +356,9 @@ if __name__ == "__main__":
 	
 	
 	uflux = grid.diff((av_f['uh'] * grid.interp(av_f['MP'].fillna(value=0), 'X', metric_weighted=['X','Y'])).fillna(value=0),'X')
-	vflux = grid.diff((av_f['vh'] * grid.interp(av_f['MP'].fillna(value=0),'Y',metric_weighted=['X','Y'],boundary='fill')).fillna(value=0),'Y')
-	div = (uflux + vflux) / st.area_t  # finite volume discretization
-	ds['MKE_to_MPE'] = (ds['BC_conversion'] + ds['dMPEdt'] - div.sum(dim='zl')).chunk({'yh':Ny, 'xh':Nx})
+	vflux = grid.diff((av_f['vh'] * grid.interp(av_f['MP'].fillna(value=0), 'Y', metric_weighted=['X','Y'], boundary='fill')).fillna(value=0),'Y')
+	div = (uflux + vflux).where(st.wet) / st.area_t  # finite volume discretization
+	ds['MKE_to_MPE'] = (ds['BC_conversion'] + ds['dMPEdt'] + div.sum(dim='zl')).chunk({'yh':Ny, 'xh':Nx})
 	ds['MKE_to_MPE'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE to MPE conversion (non-TWA)'}
 	
 	if extended_diags:

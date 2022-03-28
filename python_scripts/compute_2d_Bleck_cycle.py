@@ -23,10 +23,10 @@ if __name__ == "__main__":
 	# 
 	# Note: To get non-depth-integrated terms, remove all `.sum(dim='zi')` and `.sum(dim='zl')` statements.
 	
-	# In[3]:
+	# In[1]:
 	
 	
-	# In[4]:
+	# In[2]:
 	
 	
 	import numpy as np
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 	from dask.diagnostics import ProgressBar
 	
 	
-	# In[5]:
+	# In[3]:
 	
 	
 	run = 'nw2_0.03125deg_N15_baseline_hmix20'
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 	
 	# ## Get a view of Neverworld2 data
 	
-	# In[6]:
+	# In[4]:
 	
 	
 	# static file with grid information
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 	st = xr.open_dataset('%s/%s/static.nc' % (path, run), decode_times=False)
 	
 	
-	# In[7]:
+	# In[5]:
 	
 	
 	path = '/glade/scratch/noraloose/filtered_data'
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 	
 	# ## Prepare NW2 grid information
 	
-	# In[8]:
+	# In[6]:
 	
 	
 	from xgcm import Grid
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 	
 	# ## New dataset for Bleck cycle
 	
-	# In[9]:
+	# In[7]:
 	
 	
 	ds = xr.Dataset() # new xarray dataset for terms in Bleck cycle 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# with $g_k' = g (\rho_{k+1} - \rho_k) / \rho_o$
 	
-	# In[10]:
+	# In[8]:
 	
 	
 	rho_ref = 1000  # refernce density in NeverWorld2
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 	gprime[15] = np.nan
 	
 	
-	# In[11]:
+	# In[9]:
 	
 	
 	ds['MPE'] = (0.5 * gprime * av_f['e']**2).sum(dim='zi')
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 	#      \partial_t(\text{EPE}) = \frac{1}{2}\sum_{n=0}^{N-1} g_n' \overline{\partial_t(\eta^2_n}) - \partial_t(\text{MPE}) 
 	# \end{align}
 	
-	# In[12]:
+	# In[10]:
 	
 	
 	ds['dMPEdt'] = (gprime * av_f['e'] * av_f['de_dt']).sum(dim='zi')
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 	# \hat{u}_n  = \frac{\overline{h_n u_n}}{\bar{h}_n}, \qquad \hat{v}_n  = \frac{\overline{h_n v_n}}{\bar{h}_n}
 	# \end{align}
 	
-	# In[13]:
+	# In[11]:
 	
 	
 	MKE = 0.5 / av_f['h'] * (
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# from snapshots of `hKE` and the MKE snapshots.
 	
-	# In[14]:
+	# In[12]:
 	
 	
 	if np.all(av_f.average_DT == av_f.average_DT[0]):
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 	    raise AssertionError('averaging intervals vary')
 	
 	
-	# In[15]:
+	# In[13]:
 	
 	
 	# MKE tendency
@@ -259,7 +259,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# 
 	
-	# In[41]:
+	# In[14]:
 	
 	
 	EKE_production = av_f['PE_to_KE+KE_BT'] - 1 / st['area_t'] / av_f['h'] * (
@@ -293,7 +293,7 @@ if __name__ == "__main__":
 	# 
 	# If you want to diagnose $\Gamma^B$ via the first option (`BC_conversion_TWA_alt`), set `extended_diags=True` at the top of this notebook.
 	
-	# In[16]:
+	# In[15]:
 	
 	
 	MP = grid.cumsum(gprime * av_f['e'],'Z')  # Montgomery potential
@@ -301,7 +301,7 @@ if __name__ == "__main__":
 	av_f['MP'].attrs = {'units' : 'm2 s-2', 'long_name': 'Montgomery potential'}
 	
 	
-	# In[17]:
+	# In[16]:
 	
 	
 	# compute eddy pressure flux divergence, div = - D
@@ -340,29 +340,43 @@ if __name__ == "__main__":
 	
 	
 	# ### MKE --> MPE
-	# \begin{align}
-	#    (\text{MKE} \to \text{MPE}) & = \underbrace{\sum_{n=1}^N\bar{h}_n \left(\hat{u}_n \partial_x \bar{M}_n + \hat{v}_n \partial_y \bar{M}_n\right) + \mathcal{E}}_\text{see Figure 3b}
-	# \end{align}
-	# 
-	# with $$\mathcal{E} = \sum_{n=1}^N \left(\nabla\cdot(\overline{h_n\mathbf{u}_n}) \underbrace{- \overline{\nabla\cdot(h_n\mathbf{u}_n)}}_{\overline{\partial_t h_n}}\right) \bar{M}_n,
+	# With $$\mathcal{E} = \sum_{n=1}^N \left(\nabla\cdot(\overline{h_n\mathbf{u}_n}) \underbrace{- \overline{\nabla\cdot(h_n\mathbf{u}_n)}}_{\overline{\partial_t h_n}}\right) \bar{M}_n,
 	# $$ 
+	# we have
+	# \begin{align}
+	#    (\text{MKE} \to \text{MPE}) & = \underbrace{\sum_{n=1}^N\bar{h}_n \left(\hat{u}_n \partial_x \bar{M}_n + \hat{v}_n \partial_y \bar{M}_n\right) + \mathcal{E}}_\text{see Figure 3b}\\
+	#   &  = \partial_t(\text{MPE}) + \nabla\cdot \left( \sum_{n=1}^N \overline{h_n\mathbf{u}_n} \bar{M}_n\right),
+	# \end{align}
+	# where the last identity follows from equation (A3) in Loose et al. (2022).
+	# 
+	# Again, we have two options to compute $(\text{MKE} \to \text{MPE})$ via the first line, or via the second line. For Figure 8 in Loose et al. (2022), we chose the second option, and this is the default below (`MKE_to_MPE`). 
+	# 
+	# If you want to diagnose $(\text{MKE} \to \text{MPE})$ via the first option (`MKE_to_MPE_TWA_alt`), set `extended_diags=True` at the top of this notebook.
+	# 
 	
 	# In[17]:
 	
 	
-	# extra term E
-	uflux = grid.diff(av_f['uh'].fillna(value=0), 'X')
-	vflux = grid.diff(av_f['vh'].fillna(value=0), 'Y')
-	div = (uflux + vflux) / st.area_t  # finite volume discretization
-	extra_term = - av_f['MP'] * (div + av_f['dhdt']) 
-	
-	ds['MKE_to_MPE_TWA'] = (
-	    grid.interp(av_f['uh'] / st['dyCu'] * grid.derivative(av_f['MP'], 'X'), 'X')
-	    + grid.interp(av_f['vh'] / st['dxCv'] * grid.derivative(av_f['MP'], 'Y', boundary='fill'), 'Y')
-	    + extra_term
-	).sum(dim='zl').chunk({'yh':Ny, 'xh':Nx})
-	
+	uflux = grid.diff((av_f['uh'] * grid.interp(av_f['MP'].fillna(value=0), 'X', metric_weighted=['X','Y'])).fillna(value=0),'X')
+	vflux = grid.diff((av_f['vh'] * grid.interp(av_f['MP'].fillna(value=0), 'Y', metric_weighted=['X','Y'], boundary='fill')).fillna(value=0),'Y')
+	div = (uflux + vflux).where(st.wet) / st.area_t  # finite volume discretization
+	ds['MKE_to_MPE_TWA'] = (ds['dMPEdt'] + div.sum(dim='zl')).chunk({'yh':Ny, 'xh':Nx})
 	ds['MKE_to_MPE_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE to MPE conversion (TWA)'}
+	
+	if extended_diags:
+	    # extra term E
+	    uflux = grid.diff(av_f['uh'].fillna(value=0), 'X')
+	    vflux = grid.diff(av_f['vh'].fillna(value=0), 'Y')
+	    div = (uflux + vflux).where(st.wet) / st.area_t  # finite volume discretization
+	    extra_term = - av_f['MP'] * (div + av_f['dhdt']) 
+	
+	    ds['MKE_to_MPE_TWA_alt'] = (
+	        grid.interp(av_f['uh'] / st['dyCu'] * grid.derivative(av_f['MP'], 'X'), 'X')
+	        + grid.interp(av_f['vh'] / st['dxCv'] * grid.derivative(av_f['MP'], 'Y', boundary='fill'), 'Y')
+	        + extra_term
+	    ).sum(dim='zl').chunk({'yh':Ny, 'xh':Nx})
+	
+	    ds['MKE_to_MPE_TWA_alt'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE to MPE conversion (TWA), alternative computation'}
 	
 	
 	# ### EKE transport
