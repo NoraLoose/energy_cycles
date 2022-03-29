@@ -137,7 +137,7 @@ if __name__ == "__main__":
 	gprime[15] = np.nan
 	
 	
-	# In[10]:
+	# In[9]:
 	
 	
 	ds['MPE'] = (0.5 * gprime * av_f['e']**2).sum(dim='zi')
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 	#      \partial_t(\text{EPE}) = \frac{1}{2}\sum_{n=0}^{N-1} g_n' \overline{\partial_t(\eta^2_n}) - \partial_t(\text{MPE}) 
 	# \end{align}
 	
-	# In[11]:
+	# In[10]:
 	
 	
 	ds['dMPEdt'] = (gprime * av_f['e'] * av_f['de_dt']).sum(dim='zi')
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 	#  \text{EKE} = \overline{\text{KE}} - \text{MKE}
 	# \end{align}
 	
-	# In[12]:
+	# In[11]:
 	
 	
 	MKE = 0.5 * av_f['h'] * (
@@ -199,7 +199,7 @@ if __name__ == "__main__":
 	# \end{align}
 	# from snapshots of `hKE` and the MKE snapshots.
 	
-	# In[13]:
+	# In[12]:
 	
 	
 	if np.all(av_f.average_DT == av_f.average_DT[0]):
@@ -208,7 +208,7 @@ if __name__ == "__main__":
 	    raise AssertionError('averaging intervals vary')
 	
 	
-	# In[14]:
+	# In[13]:
 	
 	
 	# MKE tendency
@@ -253,7 +253,7 @@ if __name__ == "__main__":
 	#    \Sigma^L = \underbrace{- \sum_{n=1}^N\overline{h_n (u_n \partial_x M_n + v_n \partial_y M_n)}}_{\overline{\text{PE_to_KE+KE_BT}}} + \sum_{n=1}^N\bar{h}_n(\bar{u}_n \underbrace{\overline{\partial_x M_n}}_{-\overline{\text{PFu+u_BT_accel_visc_rem}}} + \bar{v}_n \underbrace{\overline{\partial_y M_n}}_{-\overline{\text{PFv+v_BT_accel_visc_rem}}} )
 	# \end{align}
 	
-	# In[15]:
+	# In[14]:
 	
 	
 	EKE_production = av_f['PE_to_KE+KE_BT'] - av_f['h'] / st['area_t']  * (
@@ -287,7 +287,7 @@ if __name__ == "__main__":
 	# 
 	# If you want to diagnose $\Gamma^L$ via the first option (`BC_conversion_alt`), set `extended_diags=True` at the top of this notebook.
 	
-	# In[ ]:
+	# In[15]:
 	
 	
 	MP = grid.cumsum(gprime * av_f['e'],'Z')  # Montgomery potential
@@ -376,13 +376,13 @@ if __name__ == "__main__":
 	# \mathcal{T}^L & =
 	# \sum_{n=1}^N \left[
 	# \underbrace{\overline{\nabla\cdot\left(
-	# \mathbf{u}_n\frac{h_n|\mathbf{u}_n|^2}{2}\right)}}_\overline{\text{KE_adv}}
+	# \mathbf{u}_n\frac{h_n|\mathbf{u}_n|^2}{2}\right)}}_\overline{-\text{KE_adv}}
 	# -\nabla\cdot\left(
 	# \bar{\mathbf{u}}_n\underbrace{\frac{\bar{h}_n|\bar{\mathbf{u}}_n|^2}{2}}_\text{MKE}
 	# \right)\right],
 	# \end{align}
 	
-	# In[18]:
+	# In[21]:
 	
 	
 	MKE = 0.5 * av_f['h'] * (
@@ -399,7 +399,7 @@ if __name__ == "__main__":
 	ds['MKE_transport'] = MKE_transport.sum(dim='zl')
 	ds['MKE_transport'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE transport (non-TWA)'}
 	
-	EKE_transport = av_f['KE_adv'] - MKE_transport
+	EKE_transport = - av_f['KE_adv'] - MKE_transport
 	ds['EKE_transport'] = EKE_transport.sum(dim='zl')
 	ds['EKE_transport'].attrs = {'units' : 'm3 s-3', 'long_name': 'EKE transport (non-TWA)'}
 	

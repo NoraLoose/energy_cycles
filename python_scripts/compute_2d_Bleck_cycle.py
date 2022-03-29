@@ -385,7 +385,7 @@ if __name__ == "__main__":
 	# \mathcal{T}^B & =
 	# \sum_{n=1}^N \left[
 	# \underbrace{\overline{\nabla\cdot\left(
-	# \mathbf{u}_n\frac{h_n|\mathbf{u}_n|^2}{2}\right)}}_\overline{\text{KE_adv}}
+	# \mathbf{u}_n\frac{h_n|\mathbf{u}_n|^2}{2}\right)}}_\overline{-\text{KE_adv}}
 	# -\nabla\cdot\left(
 	# \hat{\mathbf{u}}_n\underbrace{\frac{\bar{h}_n|\hat{\mathbf{u}}_n|^2}{2}}_\text{MKE}
 	# \right)\right],
@@ -408,7 +408,7 @@ if __name__ == "__main__":
 	ds['MKE_transport_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'MKE transport (TWA)'}
 	
 	
-	EKE_transport = av_f['KE_adv'] - MKE_transport
+	EKE_transport = - av_f['KE_adv'] - MKE_transport
 	ds['EKE_transport_TWA'] = EKE_transport.sum(dim='zl')
 	ds['EKE_transport_TWA'].attrs = {'units' : 'm3 s-3', 'long_name': 'EKE transport (TWA)'}
 	
