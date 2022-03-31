@@ -3,6 +3,7 @@
 Repository for computing the Lorenz and Bleck energy cycles in NeverWorld2
 
 Execute notebooks in the following order:
+
 0) make_bottom_mask.ipynb
 1) filter_data.ipynb
 2) compute_2d_Lorenz_cycle.ipynb and/or compute_2d_Bleck_cycle.ipynb
