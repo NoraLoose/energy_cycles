@@ -1,0 +1,26 @@
+#!/bin/bash -l
+#PBS -N filter128
+#PBS -A unyu0004 
+#PBS -l select=1:ngpus=1:mem=200GB
+#PBS -l walltime=24:00:00
+#PBS -l gpu_type=v100
+#PBS -q casper
+#PBS -j oe
+
+export TMPDIR=/glade/scratch/$USER/temp
+mkdir -p $TMPDIR
+
+module load conda/latest
+mamba activate my-npl-ml
+
+### Run program
+
+python /glade/u/home/noraloose/energy_cycles/python_scripts/filter_data.py --end_time=2500 --filter_fac=128 --lorenz="True" --bleck="True"
+python /glade/u/home/noraloose/energy_cycles/python_scripts/filter_data.py --end_time=2600 --filter_fac=128 --lorenz="True" --bleck="True"
+python /glade/u/home/noraloose/energy_cycles/python_scripts/filter_data.py --end_time=2700 --filter_fac=128 --lorenz="True" --bleck="True"
+python /glade/u/home/noraloose/energy_cycles/python_scripts/filter_data.py --end_time=2800 --filter_fac=128 --lorenz="True" --bleck="True"
+python /glade/u/home/noraloose/energy_cycles/python_scripts/filter_data.py --end_time=2900 --filter_fac=128 --lorenz="True" --bleck="True"
+
+
+
+
