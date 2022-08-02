@@ -15,4 +15,6 @@ Optionally: Compute 3d wind work diagnostics (needed for Loose et al. (2022)):
 
 The directory *python_scripts* has python script versions of 1) and 2) that can be submitted as batch jobs (see directory *submission_scripts*).
 
+The data obtained after executing 0) - 4) is available on figshare at https://doi.org/10.6084/m9.figshare.19984562.v1.
+
 [This repository](https://github.com/NoraLoose/loose_bachman_grooms_jansen_2022_jpo) has notebooks that take the data processed here and produce the plots in Loose et al. (2022), submitted to JPO.
