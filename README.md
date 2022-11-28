@@ -13,6 +13,8 @@ Optionally: Compute 3d wind work diagnostics (needed for Loose et al. (2022)):
 
 4) `compute_3d_wind_work.ipynb`
 
+Notebooks 0) - 4) use the NeverWorld2 data stored on NCAR's shared file system GLADE. Users without access to GLADE can find the same data at https://doi.org/10.26024/f130-ev71.
+
 The directory *python_scripts* has python script versions of 1) and 2) that can be submitted as batch jobs (see directory *submission_scripts*).
 
 The data obtained after executing 0) - 4) is available on figshare at https://doi.org/10.6084/m9.figshare.19984562.v1.
